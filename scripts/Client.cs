@@ -44,11 +44,23 @@ public class Client : Node
 
 		int prefix = BitConverter.ToInt32(receiveBytes, 0);
 
+		if (prefix == 0)
+		{
+			bool receivedBool = BitConverter.ToBoolean(receiveBytes, 4);
+			GetNode<Label>("../Label").Text = receivedBool.ToString();
+			GD.Print($"Received: {receivedBool.ToString()}");
+		}
 		if (prefix == 1)
 		{
 			int receivedInt = BitConverter.ToInt32(receiveBytes, 4);
 			GetNode<Label>("../Label").Text = receivedInt.ToString();
 			GD.Print($"Received: {receivedInt.ToString()}");
+		}
+		if (prefix == 2)
+		{
+			float receivedFloat = BitConverter.ToSingle(receiveBytes, 4);
+			GetNode<Label>("../Label").Text = receivedFloat.ToString();
+			GD.Print($"Received: {receivedFloat.ToString()}");
 		}
 		if (prefix == 3)
 		{
