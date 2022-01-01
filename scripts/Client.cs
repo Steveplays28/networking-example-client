@@ -1,9 +1,7 @@
 using System;
-using System.IO;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
 using Godot;
 
 public class Client : Node
@@ -15,8 +13,15 @@ public class Client : Node
 	{
 		public IPEndPoint endPoint;
 		public UdpClient udpClient;
+		public int clientId;
+		public int packetCount;
 	}
 	public static UdpState udpState = new UdpState();
+
+	public static Dictionary<int, Action<int, Packet>> packetFunctions = new Dictionary<int, Action<int, Packet>>()
+	{
+		{ 0, Welcome }
+	};
 
 	public override void _Ready()
 	{
@@ -28,45 +33,46 @@ public class Client : Node
 
 	}
 
-	public void StartClient()
+	private void StartClient()
 	{
-		// Create udp client
+		// Creates the UDP client and initializes the UDP state struct
 		udpState.endPoint = new IPEndPoint(IPAddress.Parse(ip), port.ToInt());
 		udpState.udpClient = new UdpClient(udpState.endPoint);
+		udpState.clientId = 0;
+		udpState.packetCount = 0;
 
+		// Start receiving packets
 		udpState.udpClient.BeginReceive(new AsyncCallback(ReceiveCallback), udpState);
 		GD.Print("Started listening for messages");
 	}
-	public void ReceiveCallback(IAsyncResult asyncResult)
+	private void ReceiveCallback(IAsyncResult asyncResult)
 	{
+		// Called when a packet is received
 		byte[] receiveBytes = udpState.udpClient.EndReceive(asyncResult, ref udpState.endPoint);
+		udpState.packetCount += 1;
+
+		// Continue listening for packets
 		udpState.udpClient.BeginReceive(new AsyncCallback(ReceiveCallback), udpState.udpClient);
 
-		int prefix = BitConverter.ToInt32(receiveBytes, 0);
+		// Handle received packet
+		using (Packet packet = new Packet(receiveBytes))
+		{
+			// Read the packet's header
+			(int packetLength, byte packetNumber, byte connectedFunction, int clientId) = packet.ReadPacketHeader();
 
-		if (prefix == 0)
-		{
-			bool receivedBool = BitConverter.ToBoolean(receiveBytes, 4);
-			GetNode<Label>("../Label").Text = receivedBool.ToString();
-			GD.Print($"Received: {receivedBool.ToString()}");
-		}
-		if (prefix == 1)
-		{
-			int receivedInt = BitConverter.ToInt32(receiveBytes, 4);
-			GetNode<Label>("../Label").Text = receivedInt.ToString();
-			GD.Print($"Received: {receivedInt.ToString()}");
-		}
-		if (prefix == 2)
-		{
-			float receivedFloat = BitConverter.ToSingle(receiveBytes, 4);
-			GetNode<Label>("../Label").Text = receivedFloat.ToString();
-			GD.Print($"Received: {receivedFloat.ToString()}");
-		}
-		if (prefix == 3)
-		{
-			string receivedString = Encoding.ASCII.GetString(receiveBytes, 4, receiveBytes.Length - 4);
-			GetNode<Label>("../Label").Text = receivedString;
-			GD.Print($"Received: {receivedString}");
+			// Invoke connected function from packet
+			packetFunctions[connectedFunction].Invoke(clientId, packet);
+
+			// TODO: check for dropped packets using packetNumber, and let the server resend a list of packets if needed
+			// TODO: use checksum to check for data corruption/data loss in the packet
 		}
 	}
+
+	#region Packet callbacks
+	private static void Welcome(int clientId, Packet packet)
+	{
+		// Do stuff with the packet's data here :D
+		GD.Print("Welcome message received from server");
+	}
+	#endregion
 }
