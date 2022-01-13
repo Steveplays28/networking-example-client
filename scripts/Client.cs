@@ -57,11 +57,11 @@ public class Client : Node
 		// Handle received packet
 		using (Packet packet = new Packet(receiveBytes))
 		{
-			// Read the packet's header
-			(byte packetNumber, byte connectedFunction, int clientId) = packet.ReadPacketHeader();
+			// Debug, lol
+			// GD.Print(string.Join(",", receiveBytes));
 
 			// Invoke connected function from packet
-			packetFunctions[connectedFunction].Invoke(clientId, packet);
+			packetFunctions[packet.connectedFunction].Invoke(packet.clientId, packet);
 
 			// TODO: check for dropped packets using packetNumber, and let the server resend a list of packets if needed
 			// TODO: use checksum to check for data corruption/data loss in the packet
