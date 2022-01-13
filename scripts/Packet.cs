@@ -1,16 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
-using Godot;
 
 /// <summary>
 /// Writeable packet, dispose using Dispose() when the packet is no longer in use.
 /// </summary>
 public class Packet : IDisposable
 {
-	public int length;
 	public byte packetNumber;
 	public byte connectedFunction;
 	public int clientId;
@@ -19,28 +15,37 @@ public class Packet : IDisposable
 	private BinaryWriter binaryWriter;
 	private BinaryReader binaryReader;
 
+	public Packet(byte packetNumber, byte connectedFunction, int clientId)
+	{
+		memoryStream = new MemoryStream();
+		binaryWriter = new BinaryWriter(memoryStream);
+		binaryReader = new BinaryReader(memoryStream);
+
+		this.packetNumber = packetNumber;
+		this.connectedFunction = connectedFunction;
+		this.clientId = clientId;
+	}
 	public Packet(byte[] byteArray)
 	{
 		memoryStream = new MemoryStream();
 		binaryWriter = new BinaryWriter(memoryStream);
-
-		binaryWriter.Write(byteArray);
 		binaryReader = new BinaryReader(memoryStream);
 
-		int packetLength = ReadInt32();
-		byte packetNumber = ReadByte();
-		byte connectedFunction = ReadByte();
-		int clientId = ReadInt32();
+		binaryWriter.Write(byteArray);
+		memoryStream.Position = 0;
+
+		packetNumber = ReadByte();
+		connectedFunction = ReadByte();
+		clientId = ReadInt32();
 	}
 
 	#region WriteData
 	/// <summary>
-	/// Writes a header to the packet (containing a client ID, packet number, connected function of the packet, length of the packet's contents, and a checksum if enabled). <br/>
+	/// Writes a header to the packet (containing the number of the packet, the connected function of the packet, the length of the packet's contents, and a checksum if enabled). <br/>
 	/// Make sure to do this after all data has been written to the packet!
 	/// </summary>
-	public void WritePacketHeader(int clientId, byte packetNumber, byte connectedFunction)
+	public void WritePacketHeader()
 	{
-		binaryWriter.Write((int)memoryStream.Length);
 		binaryWriter.Write(packetNumber);
 		binaryWriter.Write(connectedFunction);
 		binaryWriter.Write(clientId);
@@ -49,44 +54,23 @@ public class Packet : IDisposable
 		// binaryWriter.Write(CalculateChecksum());
 	}
 
-	// Byte array integer prefixes:
-	// 0 = bool
-	// 1 = integer
-	// 2 = float
-	// 3 = string
 	public void WriteData(bool data)
 	{
-		// Write data type prefix to packet
-		byte prefix = 0;
-		binaryWriter.Write(prefix);
-
 		// Write data to packet
 		binaryWriter.Write(data);
 	}
 	public void WriteData(int data)
 	{
-		// Write data type prefix to packet
-		byte prefix = 1;
-		binaryWriter.Write(prefix);
-
 		// Write data to packet
 		binaryWriter.Write(data);
 	}
 	public void WriteData(float data)
 	{
-		// Write data type prefix to packet
-		byte prefix = 2;
-		binaryWriter.Write(prefix);
-
 		// Write data to packet
 		binaryWriter.Write(data);
 	}
 	public void WriteData(string data)
 	{
-		// Write data type prefix to packet
-		byte prefix = 3;
-		binaryWriter.Write(prefix);
-
 		// Write length prefix and data to packet
 		binaryWriter.Write(data);
 	}
@@ -94,14 +78,14 @@ public class Packet : IDisposable
 
 	#region ReadData
 	/// <returns>
-	/// Packet length (int), packet number (byte), connected function (byte), client ID (int)
+	/// Packet number (byte), connected function (byte), client ID (int)
 	/// </returns> 
-	public (int, byte, byte, int) ReadPacketHeader()
+	public (byte, byte, int) ReadPacketHeader()
 	{
-		return (binaryReader.ReadInt32(), binaryReader.ReadByte(), binaryReader.ReadByte(), binaryReader.ReadInt32());
+		return (binaryReader.ReadByte(), binaryReader.ReadByte(), binaryReader.ReadInt32());
 
 		// Checksum
-		// binaryWriter.Write(CalculateChecksum());
+		// Read checksum, not implemented yet
 	}
 
 	public bool ReadBoolean()

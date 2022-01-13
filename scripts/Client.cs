@@ -58,7 +58,7 @@ public class Client : Node
 		using (Packet packet = new Packet(receiveBytes))
 		{
 			// Read the packet's header
-			(int packetLength, byte packetNumber, byte connectedFunction, int clientId) = packet.ReadPacketHeader();
+			(byte packetNumber, byte connectedFunction, int clientId) = packet.ReadPacketHeader();
 
 			// Invoke connected function from packet
 			packetFunctions[connectedFunction].Invoke(clientId, packet);
@@ -69,10 +69,14 @@ public class Client : Node
 	}
 
 	#region Packet callbacks
+	// Packet callback functions must be static, else they cannot be stored in the packetFunctions dictionary.
 	private static void Welcome(int clientId, Packet packet)
 	{
 		// Do stuff with the packet's data here :D
-		GD.Print("Welcome message received from server");
+		string welcomeMessage = packet.ReadString();
+
+		GD.Print($"Welcome message received from server: {welcomeMessage}");
+		// GetNode<Label>("/root/Spatial/Label").Text = welcomeMessage;
 	}
 	#endregion
 }
