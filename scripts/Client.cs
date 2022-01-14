@@ -58,7 +58,7 @@ public class Client : Node
 		using (Packet packet = new Packet(receiveBytes))
 		{
 			// Debug, lol
-			// GD.Print(string.Join(",", receiveBytes));
+			GD.Print(string.Join(",", receiveBytes));
 
 			// Invoke connected function from packet
 			packetFunctions[packet.connectedFunction].Invoke(packet.clientId, packet);
