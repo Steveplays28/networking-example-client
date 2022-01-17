@@ -69,7 +69,7 @@ public class Client : Node
 	}
 
 	#region Packet callbacks
-	// Packet callback functions must be static, else they cannot be stored in the packetFunctions dictionary.
+	// Packet callback functions must be static, else they cannot be stored in the packetFunctions dictionary
 	private static void Welcome(int clientId, Packet packet)
 	{
 		// Do stuff with the packet's data here :D
