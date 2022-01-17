@@ -15,6 +15,8 @@ public class Client : Node
 		public UdpClient udpClient;
 		public int clientId;
 		public int packetCount;
+
+		public Dictionary<int, UdpClient> connectedServers;
 	}
 	public static UdpState udpState = new UdpState();
 
@@ -33,6 +35,21 @@ public class Client : Node
 
 	}
 
+	public static bool IsConnectedToServer(IPEndPoint clientEndPoint)
+	{
+		bool isConnectedToServer = false;
+
+		foreach (UdpClient udpClient in udpState.connectedServers.Values)
+		{
+			if (udpClient.Client.LocalEndPoint == clientEndPoint)
+			{
+				isConnectedToServer = true;
+			}
+		}
+
+		return isConnectedToServer;
+	}
+
 	private void StartClient()
 	{
 		// Creates the UDP client and initializes the UDP state struct
@@ -48,7 +65,8 @@ public class Client : Node
 	private void ReceiveCallback(IAsyncResult asyncResult)
 	{
 		// Called when a packet is received
-		byte[] receiveBytes = udpState.udpClient.EndReceive(asyncResult, ref udpState.endPoint);
+		IPEndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, int.Parse(port));
+		byte[] receiveBytes = udpState.udpClient.EndReceive(asyncResult, ref senderEndPoint);
 		udpState.packetCount += 1;
 
 		// Continue listening for packets
@@ -60,7 +78,26 @@ public class Client : Node
 			// Debug, lol
 			GD.Print(string.Join(",", receiveBytes));
 
-			// Invoke connected function from packet
+			// Check if packet is connected to the OnConnect function (index 0)
+			if (packet.connectedFunction == 0)
+			{
+				// Check if connection already exists in the connectedServers dictionary
+				if (!IsConnectedToServer(senderEndPoint))
+				{
+					// Add the server to the connectedServers dictionary
+					int serverId = udpState.connectedServers.Count + 1 * -1;
+					UdpClient udpClient = new UdpClient(senderEndPoint);
+
+					udpState.connectedServers.Add(serverId, udpClient);
+
+					// Save the client id
+					udpState.clientId = packet.clientId;
+				}
+			}
+
+			// TODO: implement server history using savedServers dictionary
+
+			// Invoke the packet's connected function
 			packetFunctions[packet.connectedFunction].Invoke(packet.clientId, packet);
 
 			// TODO: check for dropped packets using packetNumber, and let the server resend a list of packets if needed
