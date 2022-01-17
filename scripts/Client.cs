@@ -11,6 +11,7 @@ public class Client : Node
 
 	public struct UdpState
 	{
+		// Remote (server) endpoint
 		public IPEndPoint endPoint;
 		public UdpClient udpClient;
 		public int clientId;
@@ -28,6 +29,9 @@ public class Client : Node
 	public override void _Ready()
 	{
 		StartClient();
+
+		// TODO: maybe build custom UdpClient class using Sockets
+		// Socket socket = new Socket(SocketType.Dgram, ProtocolType.Udp);
 	}
 
 	public override void _Process(float delta)
@@ -53,7 +57,7 @@ public class Client : Node
 	private void StartClient()
 	{
 		// Creates the UDP client and initializes the UDP state struct
-		udpState.endPoint = new IPEndPoint(IPAddress.Parse(ip), port.ToInt());
+		udpState.endPoint = new IPEndPoint(IPAddress.Parse(ip), 0);
 		udpState.udpClient = new UdpClient(udpState.endPoint);
 		udpState.clientId = 0;
 		udpState.packetCount = 0;
@@ -65,9 +69,11 @@ public class Client : Node
 	private void ReceiveCallback(IAsyncResult asyncResult)
 	{
 		// Called when a packet is received
-		IPEndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, int.Parse(port));
-		byte[] receiveBytes = udpState.udpClient.EndReceive(asyncResult, ref senderEndPoint);
+		IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, port.ToInt());
+		byte[] receiveBytes = udpState.udpClient.EndReceive(asyncResult, ref remoteEndPoint);
 		udpState.packetCount += 1;
+
+		GD.Print(remoteEndPoint);
 
 		// Continue listening for packets
 		udpState.udpClient.BeginReceive(new AsyncCallback(ReceiveCallback), udpState.udpClient);
@@ -82,17 +88,19 @@ public class Client : Node
 			if (packet.connectedFunction == 0)
 			{
 				// Check if connection already exists in the connectedServers dictionary
-				if (!IsConnectedToServer(senderEndPoint))
-				{
-					// Add the server to the connectedServers dictionary
-					int serverId = udpState.connectedServers.Count + 1 * -1;
-					UdpClient udpClient = new UdpClient(senderEndPoint);
+				// GD.Print(senderEndPoint.ToString());
 
-					udpState.connectedServers.Add(serverId, udpClient);
+				// if (!IsConnectedToServer(senderEndPoint))
+				// {
+				// 	// Add the server to the connectedServers dictionary
+				// 	int serverId = udpState.connectedServers.Count + 1 * -1;
+				// 	UdpClient udpClient = new UdpClient(senderEndPoint);
 
-					// Save the client id
-					udpState.clientId = packet.clientId;
-				}
+				// 	udpState.connectedServers.Add(serverId, udpClient);
+
+				// 	// Save the client id
+				// 	udpState.clientId = packet.clientId;
+				// }
 			}
 
 			// TODO: implement server history using savedServers dictionary
