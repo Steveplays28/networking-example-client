@@ -11,13 +11,11 @@ public class Client : Node
 
 	public struct UdpState
 	{
-		// Remote (server) endpoint
 		public IPEndPoint endPoint;
 		public UdpClient udpClient;
-		public int clientId;
 		public int packetCount;
 
-		public Dictionary<int, UdpClient> connectedServers;
+		public int clientId;
 	}
 	public static UdpState udpState = new UdpState();
 
@@ -29,9 +27,6 @@ public class Client : Node
 	public override void _Ready()
 	{
 		StartClient();
-
-		// TODO: maybe build custom UdpClient class using Sockets
-		// Socket socket = new Socket(SocketType.Dgram, ProtocolType.Udp);
 	}
 
 	public override void _Process(float delta)
@@ -39,25 +34,10 @@ public class Client : Node
 
 	}
 
-	public static bool IsConnectedToServer(IPEndPoint clientEndPoint)
-	{
-		bool isConnectedToServer = false;
-
-		foreach (UdpClient udpClient in udpState.connectedServers.Values)
-		{
-			if (udpClient.Client.LocalEndPoint == clientEndPoint)
-			{
-				isConnectedToServer = true;
-			}
-		}
-
-		return isConnectedToServer;
-	}
-
 	private void StartClient()
 	{
 		// Creates the UDP client and initializes the UDP state struct
-		udpState.endPoint = new IPEndPoint(IPAddress.Parse(ip), 0);
+		udpState.endPoint = new IPEndPoint(IPAddress.Parse(ip), port.ToInt());
 		udpState.udpClient = new UdpClient(udpState.endPoint);
 		udpState.clientId = 0;
 		udpState.packetCount = 0;
@@ -69,11 +49,8 @@ public class Client : Node
 	private void ReceiveCallback(IAsyncResult asyncResult)
 	{
 		// Called when a packet is received
-		IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, port.ToInt());
-		byte[] receiveBytes = udpState.udpClient.EndReceive(asyncResult, ref remoteEndPoint);
+		byte[] receiveBytes = udpState.udpClient.EndReceive(asyncResult, ref udpState.endPoint);
 		udpState.packetCount += 1;
-
-		GD.Print(remoteEndPoint);
 
 		// Continue listening for packets
 		udpState.udpClient.BeginReceive(new AsyncCallback(ReceiveCallback), udpState.udpClient);
@@ -83,27 +60,6 @@ public class Client : Node
 		{
 			// Debug, lol
 			GD.Print(string.Join(",", receiveBytes));
-
-			// Check if packet is connected to the OnConnect function (index 0)
-			if (packet.connectedFunction == 0)
-			{
-				// Check if connection already exists in the connectedServers dictionary
-				// GD.Print(senderEndPoint.ToString());
-
-				// if (!IsConnectedToServer(senderEndPoint))
-				// {
-				// 	// Add the server to the connectedServers dictionary
-				// 	int serverId = udpState.connectedServers.Count + 1 * -1;
-				// 	UdpClient udpClient = new UdpClient(senderEndPoint);
-
-				// 	udpState.connectedServers.Add(serverId, udpClient);
-
-				// 	// Save the client id
-				// 	udpState.clientId = packet.clientId;
-				// }
-			}
-
-			// TODO: implement server history using savedServers dictionary
 
 			// Invoke the packet's connected function
 			packetFunctions[packet.connectedFunction].Invoke(packet.clientId, packet);
@@ -120,7 +76,9 @@ public class Client : Node
 		// Do stuff with the packet's data here :D
 		string welcomeMessage = packet.ReadString();
 
-		GD.Print($"Welcome message received from server: {welcomeMessage}");
+		GD.Print($"Welcome message received from server ({udpState.endPoint}): {welcomeMessage}");
+		GD.Print($"Local endpoint: {udpState.udpClient.Client.LocalEndPoint}");
+		GD.Print($"Remote endpoint: {udpState.endPoint}");
 		// GetNode<Label>("/root/Spatial/Label").Text = welcomeMessage;
 	}
 	#endregion
