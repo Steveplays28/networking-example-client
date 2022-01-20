@@ -47,8 +47,6 @@ public class Client : Node
 		// Behind the scenes this function just sets udpClient.Client.RemoteEndPoint
 		udpState.udpClient.Connect(udpState.endPoint);
 
-		// test
-
 		// Start receiving packets
 		udpState.udpClient.BeginReceive(new AsyncCallback(ReceiveCallback), udpState);
 		GD.Print("Started listening for messages");
