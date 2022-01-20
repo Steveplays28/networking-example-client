@@ -1,4 +1,9 @@
-end_of_line = CRLF
+# Top-most .editorconfig file
+root = true
+
+# Global ruleset
+[*]
+end_of_line = crlf
 insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = tab
