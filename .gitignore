@@ -12,3 +12,6 @@ data_*/
 
 # MacOS-specific ignores
 *.DS_Store
+
+# Log files
+*.log
