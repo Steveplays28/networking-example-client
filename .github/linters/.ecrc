@@ -10,7 +10,7 @@
   "Disable": {
     "EndOfLine": false,
     "Indentation": false,
-    "IndentSize": false,
+    "IndentSize": true,
     "InsertFinalNewline": false,
     "TrimTrailingWhitespace": false,
     "MaxLineLength": false
