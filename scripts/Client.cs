@@ -42,6 +42,11 @@ public class Client : Node
 		udpState.clientId = 0;
 		udpState.packetCount = 0;
 
+		// "Connect" to the server
+		// Quotes because UDP is a connectionless protocol, this function just sets a default send/receive address
+		// Behind the scenes this function just sets udpClient.Client.RemoteEndPoint
+		udpState.udpClient.Connect(udpState.endPoint);
+
 		// Start receiving packets
 		udpState.udpClient.BeginReceive(new AsyncCallback(ReceiveCallback), udpState);
 		GD.Print("Started listening for messages");
