@@ -1,4 +1,3 @@
 BasedOnStyle: Microsoft
-IndentWidth: 4
-TabWidth: 4
 UseTab: UT_Always
+TabWidth: 4
