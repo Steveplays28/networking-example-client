@@ -6,6 +6,7 @@ using Godot;
 
 public class Client : Node
 {
+	#region Variables
 	public static string ip = "127.0.0.1";
 	public static string port = "24465";
 
@@ -15,25 +16,24 @@ public class Client : Node
 		public UdpClient udpClient;
 		public int packetCount;
 
+		// The ID the server assigned to this client
 		public int clientId;
 	}
 	public static UdpState udpState = new UdpState();
 
+	// Packet callback functions
 	public static Dictionary<int, Action<int, Packet>> packetFunctions = new Dictionary<int, Action<int, Packet>>()
 	{
 		{ 0, Welcome }
 	};
+	#endregion
 
 	public override void _Ready()
 	{
 		StartClient();
 	}
 
-	public override void _Process(float delta)
-	{
-
-	}
-
+	#region Receiving packets
 	private void StartClient()
 	{
 		// Creates the UDP client and initializes the UDP state struct
@@ -68,8 +68,9 @@ public class Client : Node
 			// TODO: use checksum to check for data corruption/data loss in the packet
 		}
 	}
+	#endregion
 
-	#region Packet callbacks
+	#region Packet callback functions
 	// Packet callback functions must be static, else they cannot be stored in the packetFunctions dictionary
 	private static void Welcome(int clientId, Packet packet)
 	{
