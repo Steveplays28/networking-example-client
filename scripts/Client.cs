@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Godot;
 
-public class Client : Node
+public static class Client
 {
 	#region Variables
 	public static string ip = "127.0.0.1";
@@ -24,17 +25,11 @@ public class Client : Node
 	// Packet callback functions
 	public static Dictionary<int, Action<int, Packet>> packetFunctions = new Dictionary<int, Action<int, Packet>>()
 	{
-		{ 0, Welcome }
+		{ 0, OnConnect }
 	};
 	#endregion
 
-	public override void _Ready()
-	{
-		StartClient();
-	}
-
-	#region Receiving packets
-	private void StartClient()
+	public static void StartClient()
 	{
 		// Creates the UDP client and initializes the UDP state struct
 		udpState.endPoint = new IPEndPoint(IPAddress.Parse(ip), port.ToInt());
@@ -46,46 +41,75 @@ public class Client : Node
 		// Quotes because UDP is a connectionless protocol, this function just sets a default send/receive address
 		// Behind the scenes this function just sets udpClient.Client.RemoteEndPoint
 		udpState.udpClient.Connect(udpState.endPoint);
-
-		// Start receiving packets
-		udpState.udpClient.BeginReceive(new AsyncCallback(ReceiveCallback), udpState);
 		GD.Print("Started listening for messages");
 	}
-	private void ReceiveCallback(IAsyncResult asyncResult)
+
+	#region Sending packets
+	/// <summary>
+	/// Sends a packet to the server asynchronously.
+	/// </summary>
+	/// <param name="packet">The packet to send.</param>
+	/// <returns></returns>
+	public static async Task SendPacketToServerAsync(Packet packet)
 	{
-		// Called when a packet is received
-		byte[] receiveBytes = udpState.udpClient.EndReceive(asyncResult, ref udpState.endPoint);
-		udpState.packetCount += 1;
+		// Write packet header
+		packet.WritePacketHeader();
 
-		// Continue listening for packets
-		udpState.udpClient.BeginReceive(new AsyncCallback(ReceiveCallback), udpState.udpClient);
+		// Get data from the packet
+		byte[] packetData = packet.ReturnData();
 
-		// Handle received packet
-		using (Packet packet = new Packet(receiveBytes))
+		// Send the packet to the server
+		await udpState.udpClient.SendAsync(packetData, packetData.Length, udpState.endPoint);
+	}
+	#endregion
+
+	#region Receiving packets
+	public static async Task ReceivePacketAsync()
+	{
+		UdpReceiveResult receivedPacket = await udpState.udpClient.ReceiveAsync();
+
+		// Extract data from the received packet
+		byte[] packetData = receivedPacket.Buffer;
+		IPEndPoint remoteEndPoint = receivedPacket.RemoteEndPoint;
+
+		// Debug, lol
+		GD.Print(string.Join(",", packetData));
+
+		// Construct new Packet object from the received packet
+		using (Packet constructedPacket = new Packet(packetData))
 		{
-			// Debug, lol
-			GD.Print(string.Join(",", receiveBytes));
-
-			// Invoke the packet's connected function
-			packetFunctions[packet.connectedFunction].Invoke(packet.clientId, packet);
-
-			// TODO: check for dropped packets using packetNumber, and let the server resend a list of packets if needed
-			// TODO: use checksum to check for data corruption/data loss in the packet
+			packetFunctions[constructedPacket.connectedFunction].Invoke(constructedPacket.clientId, constructedPacket);
 		}
 	}
 	#endregion
 
 	#region Packet callback functions
 	// Packet callback functions must be static, else they cannot be stored in the packetFunctions dictionary
-	private static void Welcome(int clientId, Packet packet)
+	private static void OnConnect(int clientId, Packet packet)
 	{
-		// Do stuff with the packet's data here :D
 		string welcomeMessage = packet.ReadString();
 
 		GD.Print($"Welcome message received from server ({udpState.endPoint}): {welcomeMessage}");
 		GD.Print($"Local endpoint: {udpState.udpClient.Client.LocalEndPoint}");
 		GD.Print($"Remote endpoint: {udpState.endPoint}");
+
 		// GetNode<Label>("/root/Spatial/Label").Text = welcomeMessage;
 	}
 	#endregion
+}
+
+public class ClientController : Node
+{
+	public override void _Ready()
+	{
+		Client.ip = "127.0.0.1";
+		Client.port = "24465";
+
+		Client.StartClient();
+	}
+
+	public override async void _Process(float delta)
+	{
+		await Client.ReceivePacketAsync();
+	}
 }
