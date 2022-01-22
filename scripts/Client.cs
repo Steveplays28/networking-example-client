@@ -29,7 +29,7 @@ public static class Client
 	};
 	#endregion
 
-	public static void StartClient()
+	public static async Task StartClient()
 	{
 		// Creates the UDP client and initializes the UDP state struct
 		udpState.endPoint = new IPEndPoint(IPAddress.Parse(ip), port.ToInt());
@@ -42,6 +42,11 @@ public static class Client
 		// Behind the scenes this function just sets udpClient.Client.RemoteEndPoint
 		udpState.udpClient.Connect(udpState.endPoint);
 		GD.Print("Started listening for messages");
+
+		using (Packet packet = new Packet(0, 0, udpState.clientId))
+		{
+			await SendPacketToServerAsync(packet);
+		}
 	}
 
 	#region Sending packets
@@ -59,7 +64,7 @@ public static class Client
 		byte[] packetData = packet.ReturnData();
 
 		// Send the packet to the server
-		await udpState.udpClient.SendAsync(packetData, packetData.Length, udpState.endPoint);
+		await udpState.udpClient.SendAsync(packetData, packetData.Length);
 	}
 	#endregion
 
@@ -87,29 +92,13 @@ public static class Client
 	// Packet callback functions must be static, else they cannot be stored in the packetFunctions dictionary
 	private static void OnConnect(int clientId, Packet packet)
 	{
-		string welcomeMessage = packet.ReadString();
+		string messageOfTheDay = packet.ReadString();
 
-		GD.Print($"Welcome message received from server ({udpState.endPoint}): {welcomeMessage}");
+		GD.Print($"Welcome message received from server ({udpState.endPoint}): {messageOfTheDay}");
 		GD.Print($"Local endpoint: {udpState.udpClient.Client.LocalEndPoint}");
 		GD.Print($"Remote endpoint: {udpState.endPoint}");
 
 		// GetNode<Label>("/root/Spatial/Label").Text = welcomeMessage;
 	}
 	#endregion
-}
-
-public class ClientController : Node
-{
-	public override void _Ready()
-	{
-		Client.ip = "127.0.0.1";
-		Client.port = "24465";
-
-		Client.StartClient();
-	}
-
-	public override async void _Process(float delta)
-	{
-		await Client.ReceivePacketAsync();
-	}
 }
