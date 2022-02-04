@@ -14,7 +14,7 @@ public class ClientController : Node
 	{
 		Client.ReceivePacket();
 
-		if (Input.IsActionJustReleased("ui_end"))
+		if (Input.IsActionJustReleased("ui_cancel"))
 		{
 			GetTree().Quit();
 		}
