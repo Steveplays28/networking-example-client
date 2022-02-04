@@ -62,7 +62,7 @@ public static class Client
 		{
 			udpState.udpClient.Connect(udpState.serverEndPoint);
 			udpState.hasStarted = true;
-			GD.Print($"{printHeader} Started listening for messages from the server on {udpState.serverEndPoint}.");
+			GD.Print($"{printHeader} Started listening for messages from the server on {udpState.localEndPoint}.");
 
 			using (Packet packet = new Packet(0, 0, udpState.clientId, udpState.serverId))
 			{
@@ -101,7 +101,7 @@ public static class Client
 		try
 		{
 			// Extract data from the received packet
-			IPEndPoint remoteEndPoint = null;
+			IPEndPoint remoteEndPoint = udpState.serverEndPoint;
 			byte[] packetData = udpState.udpClient.Receive(ref remoteEndPoint);
 
 			// Debug, lol
