@@ -8,7 +8,7 @@ public static class Client
 {
 	#region Variables
 	public static string ip = "127.0.0.1";
-	public static string port = "24466";
+	public static string port = "24463";
 
 	// Header for GD.Print() messages, default = "[Client]:"
 	public static string printHeader = "[Client]:";
@@ -40,7 +40,7 @@ public static class Client
 	{
 		// Creates the UDP client and initializes the UDP state struct
 		udpState.serverEndPoint = new IPEndPoint(IPAddress.Parse(ip), port.ToInt());
-		udpState.udpClient = new UdpClient();
+		udpState.udpClient = new UdpClient("127.0.0.1", 25544);
 		udpState.localEndPoint = (IPEndPoint)udpState.udpClient.Client.LocalEndPoint;
 		udpState.packetCount = 0;
 
@@ -145,4 +145,6 @@ public static class Client
 		// GetNode<Label>("/root/Spatial/Label").Text = welcomeMessage;
 	}
 	#endregion
+
+	// TODO: Close socket properly... how did I forget this
 }
