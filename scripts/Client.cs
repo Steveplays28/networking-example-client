@@ -26,6 +26,8 @@ public static class Client
 		public int clientId;
 		// The ID used to receive packets meant for newly connected clients or all clients, default = -1
 		public int allClientsId;
+
+		public bool hasStarted;
 	}
 	public static UdpState udpState = new UdpState();
 
@@ -38,9 +40,14 @@ public static class Client
 
 	public static void StartClient()
 	{
+		if (udpState.hasStarted)
+		{
+			return;
+		}
+
 		// Creates the UDP client and initializes the UDP state struct
 		udpState.serverEndPoint = new IPEndPoint(IPAddress.Parse(ip), port.ToInt());
-		udpState.udpClient = new UdpClient(udpState.serverEndPoint);
+		udpState.udpClient = new UdpClient(0);
 		udpState.localEndPoint = (IPEndPoint)udpState.udpClient.Client.LocalEndPoint;
 		udpState.packetCount = 0;
 
@@ -51,12 +58,21 @@ public static class Client
 		// "Connect" to the server
 		// Quotes because UDP is a connectionless protocol, this function just sets a default send/receive address
 		// Behind the scenes this function just sets udpClient.Client.RemoteEndPoint
-		udpState.udpClient.Connect(udpState.serverEndPoint);
-		GD.Print($"{printHeader} Started listening for messages from the server on {udpState.serverEndPoint}.");
-
-		using (Packet packet = new Packet(0, 0, udpState.clientId, udpState.serverId))
+		try
 		{
-			SendPacketToServer(packet);
+			udpState.udpClient.Connect(udpState.serverEndPoint);
+			udpState.hasStarted = true;
+			GD.Print($"{printHeader} Started listening for messages from the server on {udpState.serverEndPoint}.");
+
+			using (Packet packet = new Packet(0, 0, udpState.clientId, udpState.serverId))
+			{
+				SendPacketToServer(packet);
+				GD.Print($"{printHeader} Sending welcome packet to the server...");
+			}
+		}
+		catch (Exception e)
+		{
+			GD.PrintErr($"{printHeader} Failed connecting to the server: {e}\nThere most likely is a port mismatch or the server hasn't been started yet.");
 		}
 	}
 
@@ -82,37 +98,44 @@ public static class Client
 	#region Receiving packets
 	public static void ReceivePacket()
 	{
-		// Extract data from the received packet
-		IPEndPoint remoteEndPoint = null;
-		byte[] packetData = udpState.udpClient.Receive(ref remoteEndPoint);
-
-		// Debug, lol
-		GD.Print($"{printHeader} Received bytes: {string.Join(", ", packetData)}");
-
-		// Construct new Packet object from the received packet
-		using (Packet constructedPacket = new Packet(packetData))
+		try
 		{
-			if (constructedPacket.senderId == udpState.serverId && constructedPacket.recipientId != udpState.clientId)
-			{
-				packetFunctions[constructedPacket.connectedFunction].Invoke(constructedPacket);
-				return;
-			}
+			// Extract data from the received packet
+			IPEndPoint remoteEndPoint = null;
+			byte[] packetData = udpState.udpClient.Receive(ref remoteEndPoint);
 
-			if (constructedPacket.recipientId == udpState.clientId)
+			// Debug, lol
+			GD.Print($"{printHeader} Received bytes: {string.Join(", ", packetData)}");
+
+			// Construct new Packet object from the received packet
+			using (Packet constructedPacket = new Packet(packetData))
 			{
-				// Packet was sent by self, return out of function
-				return;
+				if (constructedPacket.senderId == udpState.serverId && constructedPacket.recipientId != udpState.clientId)
+				{
+					packetFunctions[constructedPacket.connectedFunction].Invoke(constructedPacket);
+					return;
+				}
+
+				if (constructedPacket.recipientId == udpState.clientId)
+				{
+					// Packet was sent by self, return out of function
+					return;
+				}
+				if (constructedPacket.senderId != udpState.serverId)
+				{
+					GD.PrintErr($"{printHeader} Received a senderId of {constructedPacket.senderId}, which isn't equal to the serverId of {udpState.serverId}!");
+				}
+				if (constructedPacket.recipientId == udpState.allClientsId)
+				{
+					// Execute function anyway if the packet is meant for all clients or newly connected clients
+					packetFunctions[constructedPacket.connectedFunction].Invoke(constructedPacket);
+					return;
+				}
 			}
-			if (constructedPacket.senderId != udpState.serverId)
-			{
-				GD.PrintErr($"{printHeader} Received a senderId of {constructedPacket.senderId}, which isn't equal to the serverId of {udpState.serverId}!");
-			}
-			if (constructedPacket.recipientId == udpState.allClientsId)
-			{
-				// Execute function anyway if the packet is meant for all clients or newly connected clients
-				packetFunctions[constructedPacket.connectedFunction].Invoke(constructedPacket);
-				return;
-			}
+		}
+		catch (Exception e)
+		{
+			GD.PrintErr($"{printHeader} Failed receiving a packet from the server: {e}\nCheck if the client is connected properly!");
 		}
 	}
 	#endregion
@@ -146,5 +169,16 @@ public static class Client
 	}
 	#endregion
 
-	// TODO: Close socket properly... how did I forget this
+	public static void CloseUdpClient()
+	{
+		try
+		{
+			udpState.udpClient.Close();
+			GD.Print($"{printHeader} Successfully closed the UdpClient!");
+		}
+		catch (SocketException e)
+		{
+			GD.PrintErr($"{printHeader} Failed closing the UdpClient: {e}");
+		}
+	}
 }
