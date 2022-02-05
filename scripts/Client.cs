@@ -64,6 +64,7 @@ public static class Client
 			udpState.hasStarted = true;
 			GD.Print($"{printHeader} Started listening for messages from the server on {udpState.localEndPoint}.");
 
+			// Ask server to connect
 			using (Packet packet = new Packet(0, 0, udpState.clientId, udpState.serverId))
 			{
 				SendPacketToServer(packet);
