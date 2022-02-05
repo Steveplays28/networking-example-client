@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using Godot;
 
 public static class Client
@@ -60,6 +61,14 @@ public static class Client
 		// Behind the scenes this function just sets udpClient.Client.RemoteEndPoint
 		try
 		{
+			// Create and start a UDP receive thread for Server.ReceivePacket(), so it doesn't block Godot's main thread
+			System.Threading.Thread udpReceiveThread = new System.Threading.Thread(new ThreadStart(ReceivePacket))
+			{
+				Name = "UDP receive thread",
+				IsBackground = true
+			};
+			udpReceiveThread.Start();
+
 			udpState.udpClient.Connect(udpState.serverEndPoint);
 			udpState.hasStarted = true;
 			GD.Print($"{printHeader} Started listening for messages from the server on {udpState.localEndPoint}.");
