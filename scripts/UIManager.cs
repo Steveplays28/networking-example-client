@@ -12,10 +12,17 @@ public class UIManager : Node
 			GD.Print($"UIManager instance was already set, overriding.");
 		}
 		instance = this;
+
+		ClientController.instance.Connect(nameof(ClientController.OnConnected), this, "OnConnected");
 	}
 
 	public void SetLabelText(string text)
 	{
 		GetNode<Label>("/root/Spatial/Label").Text = text;
+	}
+
+	private void OnConnected(int clientId, string messageOfTheDay)
+	{
+		SetLabelText(messageOfTheDay);
 	}
 }
