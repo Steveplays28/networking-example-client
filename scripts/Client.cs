@@ -21,21 +21,16 @@ public static class Client
 		public UdpClient udpClient;
 		public int packetCount;
 
-		// Server ID, default = -1
-		public int serverId;
-		// The ID the server assigned to this client
-		public int clientId;
-		// The ID used to receive packets meant for newly connected clients or all clients, default = -1
-		public int allClientsId;
-
 		public bool hasStarted;
+		public bool isConnected;
 	}
 	public static UdpState udpState = new UdpState();
 
 	// Packet callback functions
 	public static Dictionary<int, Action<Packet>> packetFunctions = new Dictionary<int, Action<Packet>>()
 	{
-		{ 0, OnConnected }
+		{ 0, OnConnected },
+		{ 1, OnDisconnected }
 	};
 	#endregion
 
@@ -52,13 +47,9 @@ public static class Client
 		udpState.localEndPoint = (IPEndPoint)udpState.udpClient.Client.LocalEndPoint;
 		udpState.packetCount = 0;
 
-		udpState.serverId = -1;
-		udpState.clientId = -1;
-		udpState.allClientsId = -1;
+		udpState.hasStarted = false;
+		udpState.isConnected = false;
 
-		// "Connect" to the server
-		// Quotes because UDP is a connectionless protocol, this function just sets a default send/receive address
-		// Behind the scenes this function just sets udpClient.Client.RemoteEndPoint
 		try
 		{
 			// Create and start a UDP receive thread for Server.ReceivePacket(), so it doesn't block Godot's main thread
@@ -68,16 +59,17 @@ public static class Client
 				IsBackground = true
 			};
 			udpReceiveThread.Start();
-
-			udpState.udpClient.Connect(udpState.serverEndPoint);
 			udpState.hasStarted = true;
 			GD.Print($"{printHeader} Started listening for messages from the server on {udpState.localEndPoint}.");
+
+			// "Connect" to the server (sets udpClient.Client.RemoteEndPoint)
+			udpState.udpClient.Connect(udpState.serverEndPoint);
 
 			// Ask server to connect
 			using (Packet packet = new Packet(0, 0))
 			{
 				SendPacketToServer(packet);
-				GD.Print($"{printHeader} Sending welcome packet to the server...");
+				GD.Print($"{printHeader} Sending connect packet to the server...");
 			}
 		}
 		catch (Exception e)
@@ -137,9 +129,16 @@ public static class Client
 		int clientId = packet.ReadInt32();
 		string messageOfTheDay = packet.ReadString();
 
-		UIManager.instance.SetLabelText($"Connected to server {udpState.serverEndPoint}, received client ID of {clientId}.\nMessage of the day received from server: {messageOfTheDay}");
+		udpState.isConnected = true;
 		ClientController.instance.EmitSignal(nameof(ClientController.OnConnected), clientId, messageOfTheDay);
 		GD.Print($"{printHeader} Connected to server {udpState.serverEndPoint}, received client ID of {clientId}.\nMessage of the day received from server: {messageOfTheDay}");
+	}
+
+	private static void OnDisconnected(Packet packet)
+	{
+		udpState.isConnected = false;
+		ClientController.instance.EmitSignal(nameof(ClientController.OnDisconnected));
+		GD.Print($"{printHeader} Disconnected from the server.");
 	}
 	#endregion
 
