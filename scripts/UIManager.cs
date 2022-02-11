@@ -13,8 +13,8 @@ public class UIManager : Node
 		}
 		instance = this;
 
-		ClientController.instance.Connect(nameof(ClientController.OnConnected), this, "OnConnected");
-		ClientController.instance.Connect(nameof(ClientController.OnDisconnected), this, "OnDisconnected");
+		ClientController.instance.Connect(nameof(ClientController.Connected), this, "OnConnected");
+		ClientController.instance.Connect(nameof(ClientController.Disconnected), this, "OnDisconnected");
 	}
 
 	public void SetLabelText(string text)

@@ -130,14 +130,14 @@ public static class Client
 		string messageOfTheDay = packet.ReadString();
 
 		udpState.isConnected = true;
-		ClientController.instance.EmitSignal(nameof(ClientController.OnConnected), clientId, messageOfTheDay);
+		ClientController.instance.EmitSignal(nameof(ClientController.Connected), clientId, messageOfTheDay);
 		GD.Print($"{printHeader} Connected to server {udpState.serverEndPoint}, received client ID of {clientId}.\nMessage of the day received from server: {messageOfTheDay}");
 	}
 
 	private static void OnDisconnected(Packet packet)
 	{
 		udpState.isConnected = false;
-		ClientController.instance.EmitSignal(nameof(ClientController.OnDisconnected));
+		ClientController.instance.EmitSignal(nameof(ClientController.Disconnected));
 		GD.Print($"{printHeader} Disconnected from the server.");
 	}
 	#endregion
