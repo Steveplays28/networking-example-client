@@ -5,7 +5,9 @@ public class ClientController : Node
 	public static ClientController instance;
 
 	[Signal]
-	public delegate void OnConnected(int clientId, string messageOfTheDay);
+	public delegate void Connected(int clientId, string messageOfTheDay);
+	[Signal]
+	public delegate void Disconnected();
 
 	public override void _Ready()
 	{
@@ -27,12 +29,20 @@ public class ClientController : Node
 	{
 		if (Input.IsActionJustReleased("ui_cancel"))
 		{
-			GetTree().Quit();
+			Disconnect();
 		}
 	}
 
 	public override void _ExitTree()
 	{
 		Client.CloseUdpClient();
+	}
+
+	public void Disconnect()
+	{
+		using (Packet packet = new Packet(0, 1))
+		{
+			Client.SendPacketToServer(packet);
+		}
 	}
 }

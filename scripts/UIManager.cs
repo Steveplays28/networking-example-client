@@ -13,7 +13,8 @@ public class UIManager : Node
 		}
 		instance = this;
 
-		ClientController.instance.Connect(nameof(ClientController.OnConnected), this, "OnConnected");
+		ClientController.instance.Connect(nameof(ClientController.Connected), this, "OnConnected");
+		ClientController.instance.Connect(nameof(ClientController.Disconnected), this, "OnDisconnected");
 	}
 
 	public void SetLabelText(string text)
@@ -24,5 +25,10 @@ public class UIManager : Node
 	private void OnConnected(int clientId, string messageOfTheDay)
 	{
 		SetLabelText(messageOfTheDay);
+	}
+
+	private void OnDisconnected()
+	{
+		SetLabelText("Disconnected from the server.");
 	}
 }
