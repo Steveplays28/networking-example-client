@@ -1,48 +1,32 @@
 using Godot;
+using SteveNetworking;
 
 public class ClientController : Node
 {
 	public static ClientController instance;
 
-	[Signal]
-	public delegate void Connected(int clientId, string messageOfTheDay);
-	[Signal]
-	public delegate void Disconnected();
-
 	public override void _Ready()
 	{
+		// C# singleton instance initializer for strong typing support
 		if (instance != null)
 		{
 			GD.PushWarning("ClientController instance is already set, overriding!");
 		}
 		instance = this;
 
-		// Set the endpoint to connect the client to
-		Client.ip = "127.0.0.1";
-		Client.port = "24476";
-
-		// Start client
-		Client.StartClient();
+		Client.InitializeClient();
 	}
 
 	public override void _Process(float delta)
 	{
 		if (Input.IsActionJustReleased("ui_cancel"))
 		{
-			Disconnect();
+			Client.Disconnect();
 		}
 	}
 
 	public override void _ExitTree()
 	{
 		Client.CloseUdpClient();
-	}
-
-	public void Disconnect()
-	{
-		using (Packet packet = new Packet(0, 1))
-		{
-			Client.SendPacketToServer(packet);
-		}
 	}
 }

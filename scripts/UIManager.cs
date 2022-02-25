@@ -1,4 +1,5 @@
 using Godot;
+using SteveNetworking;
 
 public class UIManager : Node
 {
@@ -9,12 +10,12 @@ public class UIManager : Node
 		// C# singleton instance initializer for strong typing support
 		if (instance != null)
 		{
-			GD.Print($"UIManager instance was already set, overriding.");
+			GD.PushWarning($"UIManager instance was already set, overriding.");
 		}
 		instance = this;
 
-		ClientController.instance.Connect(nameof(ClientController.Connected), this, "OnConnected");
-		ClientController.instance.Connect(nameof(ClientController.Disconnected), this, "OnDisconnected");
+		PacketCallbacksClient.OnConnected += OnConnected;
+		PacketCallbacksClient.OnDisconnected += OnDisconnected;
 	}
 
 	public void SetLabelText(string text)
@@ -24,7 +25,7 @@ public class UIManager : Node
 
 	private void OnConnected(int clientId, string messageOfTheDay)
 	{
-		SetLabelText(messageOfTheDay);
+		SetLabelText($"Connected to server {Client.udpState.serverEndPoint}, received client ID of {clientId}.\nMessage of the day received from server: {messageOfTheDay}");
 	}
 
 	private void OnDisconnected()
